@@ -1,6 +1,5 @@
-// src/App.jsx
 import { useState, useEffect } from 'react';
-import CollapsibleSnippet from './components/CollapsibleSnippet'; // Import the new component
+import CollapsibleSnippet from './components/CollapsibleSnippet';
 import './main.css';
 
 function App() {
@@ -9,9 +8,8 @@ function App() {
   const [language, setLanguage] = useState('JavaScript');
   const [code, setCode] = useState('');
   
-  // --- NEW STATE TO MANAGE WHICH SNIPPET IS OPEN ---
   const [activeSnippetId, setActiveSnippetId] = useState(null);
-  // ----------------------------------------------------
+  const [editingSnippetId, setEditingSnippetId] = useState(null); // State for which snippet is being edited
 
   useEffect(() => {
     const savedSnippets = localStorage.getItem('codeSnippets');
@@ -27,21 +25,37 @@ function App() {
     if (!title || !code) return;
     const newSnippet = { id: crypto.randomUUID(), title, language, code };
     setSnippets([newSnippet, ...snippets]);
-    setTitle('');
-    setCode('');
-    setLanguage('JavaScript');
+    setTitle(''); setCode(''); setLanguage('JavaScript');
   };
   
   const deleteSnippet = (id) => {
     setSnippets(snippets.filter(snippet => snippet.id !== id));
   };
   
-  // --- NEW FUNCTION TO HANDLE TOGGLING ---
   const handleToggleSnippet = (id) => {
-    // If the clicked snippet is already open, close it. Otherwise, open it.
+    if (editingSnippetId === id) return; // Don't collapse if we are editing
     setActiveSnippetId(activeSnippetId === id ? null : id);
   };
-  // ---------------------------------------
+
+  // --- NEW FUNCTIONS FOR EDITING LOGIC ---
+  const handleSetEditing = (id) => {
+    setActiveSnippetId(id); // Force expand when editing
+    setEditingSnippetId(id);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSnippetId(null);
+  };
+  
+  const handleSaveEdit = (id, updatedData) => {
+    setSnippets(prevSnippets => 
+      prevSnippets.map(snippet => 
+        snippet.id === id ? { ...snippet, ...updatedData } : snippet
+      )
+    );
+    setEditingSnippetId(null); // Exit editing mode
+  };
+  // ------------------------------------------
 
   return (
     <div className="app-container">
@@ -53,20 +67,12 @@ function App() {
       <div className="main-content">
         <form onSubmit={handleSubmit} className="snippet-form">
           <h2>Add a New Snippet</h2>
-          <input 
-            type="text" value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Snippet Title (e.g., 'Async Fetch Function')" required
-          />
+          {/* ... form JSX remains the same ... */}
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Snippet Title..." required />
           <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option>JavaScript</option> <option>Python</option>
-            <option>HTML</option> <option>CSS</option> <option>SQL</option>
+            <option>JavaScript</option><option>Python</option><option>HTML</option><option>CSS</option><option>SQL</option>
           </select>
-          <textarea 
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Paste your code here..." required
-          ></textarea>
+          <textarea value={code} onChange={(e) => setCode(e.target.value)} placeholder="Paste your code here..." required></textarea>
           <button type="submit">Save Snippet</button>
         </form>
 
@@ -76,8 +82,12 @@ function App() {
               key={snippet.id} 
               snippet={snippet} 
               onDelete={deleteSnippet}
-              isActive={activeSnippetId === snippet.id} // Pass down if it's active
-              onToggle={handleToggleSnippet} // Pass down the toggle handler
+              isActive={activeSnippetId === snippet.id}
+              onToggle={handleToggleSnippet}
+              isEditing={editingSnippetId === snippet.id} // Pass down if it's being edited
+              onEdit={handleSetEditing}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
             />
           ))}
         </div>
